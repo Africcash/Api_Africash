@@ -13,7 +13,7 @@ urlpatterns = [
     path('auth/verify/', WalletVerifyView.as_view(), name='auth-verify'),
     path('auth/me/', WalletMeView.as_view(), name='auth-me'),
 
-    # MinIO Object storage
+    # Media file storage
     path('upload/', FileUploadView.as_view(), name='file-upload'),
 
     # Network configuration

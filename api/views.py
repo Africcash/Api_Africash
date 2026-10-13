@@ -501,11 +501,11 @@ class FileUploadView(APIView):
     parser_classes = [MultiPartParser, FormParser]
 
     @extend_schema(
-        summary="Upload image to MinIO object storage",
-        description="Upload an avatar image or agent storefront picture to MinIO S3 object storage (max 5MB, JPG/PNG/WEBP/GIF). Returns the public CDN / storage URL.",
+        summary="Upload image to media storage",
+        description="Upload an avatar image or agent storefront picture to local media storage (max 5MB, JPG/PNG/WEBP/GIF). Returns the media URL.",
         request=FileUploadRequestSerializer,
         responses={201: FileUploadResponseSerializer, 400: OpenApiResponse(description="Invalid file or size exceeded")},
-        tags=["Object Storage"]
+        tags=["Media Storage"]
     )
     def post(self, request):
         file_obj = request.FILES.get('file')

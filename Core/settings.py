@@ -31,7 +31,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_filters',
     'drf_spectacular',
-    'storages',
     # Local apps
     'api',
 ]
@@ -209,12 +208,7 @@ STELLAR_HORIZON_URL = os.getenv('STELLAR_HORIZON_URL', 'https://horizon-testnet.
 USDC_ASSET_CONTRACT_ID = os.getenv('USDC_ASSET_CONTRACT_ID', 'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWUQX3PUL5L5OBOFBUC')
 ESCROW_CONTRACT_ID = os.getenv('ESCROW_CONTRACT_ID', 'CCX2P2KDVKVVMX55OPUVYESN5XD73GEJ7EWLNZWNMNLAVZIQVZH5RNRC')
 
-# Object Storage (MinIO / S3)
-MINIO_ENDPOINT = os.getenv('MINIO_ENDPOINT', 'http://localhost:9000').strip()
-MINIO_PUBLIC_URL = os.getenv('MINIO_PUBLIC_URL', 'http://localhost:9000').strip()
-MINIO_ACCESS_KEY = os.getenv('MINIO_ACCESS_KEY', 'minioadmin')
-MINIO_SECRET_KEY = os.getenv('MINIO_SECRET_KEY', 'minioadmin')
-MINIO_BUCKET_NAME = os.getenv('MINIO_BUCKET_NAME', 'africash-media')
-
-MEDIA_URL = f"{MINIO_PUBLIC_URL}/{MINIO_BUCKET_NAME}/"
+# Media files (Local storage)
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+

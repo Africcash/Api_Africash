@@ -1,6 +1,7 @@
 import io
 import base64
 from unittest.mock import patch, MagicMock
+from django.conf import settings
 from django.test import TestCase
 from django.urls import reverse
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -71,19 +72,16 @@ class FileUploadApiTest(TestCase):
         self.assertIn("error", response.data)
         self.assertIn("File size exceeds 5MB limit", response.data['error'])
 
-    @patch('api.storage.get_s3_client')
-    def test_upload_object_calls_s3_minio(self, mock_get_s3):
-        # Test MinIO S3 put_object interaction
-        mock_s3 = MagicMock()
-        mock_get_s3.return_value = mock_s3
-
+    def test_upload_object_saves_to_local_media(self):
+        # Test saving uploaded object to local media directory
         data = b"image content test"
         url, key = upload_object(data, "storefront.png", "image/png")
 
-        self.assertTrue(mock_s3.put_object.called)
-        call_kwargs = mock_s3.put_object.call_args[1]
-        self.assertEqual(call_kwargs['Bucket'], 'africash-media')
-        self.assertEqual(call_kwargs['ContentType'], 'image/png')
-        self.assertEqual(call_kwargs['Body'], data)
         self.assertTrue(key.endswith('.png'))
         self.assertIn(key, url)
+        self.assertTrue(url.startswith('/media/uploads/'))
+
+        # Verify file is written to local filesystem
+        file_path = settings.MEDIA_ROOT / 'uploads' / key
+        self.assertTrue(file_path.exists())
+        self.assertEqual(file_path.read_bytes(), data)
