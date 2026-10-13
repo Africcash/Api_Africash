@@ -36,7 +36,7 @@ services:
       - africash_network
 
   minio:
-    image: minio/minio:latest
+    image: alpine/minio:latest-release
     container_name: africash_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -53,22 +53,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - africash_network
-
-  minio_init:
-    image: minio/mc:latest
-    container_name: africash_minio_init
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      /usr/bin/mc alias set local http://minio:9000 $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin};
-      /usr/bin/mc mb local/$${MINIO_BUCKET_NAME:-africash-media} --ignore-existing;
-      /usr/bin/mc anonymous set download local/$${MINIO_BUCKET_NAME:-africash-media};
-      exit 0;
-      "
     networks:
       - africash_network
 

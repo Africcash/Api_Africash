@@ -32,6 +32,8 @@ def get_s3_client():
         region_name='us-east-1',
     )
 
+import json
+
 def ensure_bucket_exists(s3_client, bucket_name: str):
     # Ensure MinIO bucket exists before uploading
     try:
@@ -39,6 +41,20 @@ def ensure_bucket_exists(s3_client, bucket_name: str):
     except ClientError:
         try:
             s3_client.create_bucket(Bucket=bucket_name)
+            # Set public-read policy so uploaded media can be viewed anonymously
+            policy = {
+                "Version": "2012-10-17",
+                "Statement": [
+                    {
+                        "Sid": "PublicReadGetObject",
+                        "Effect": "Allow",
+                        "Principal": "*",
+                        "Action": ["s3:GetObject"],
+                        "Resource": [f"arn:aws:s3:::{bucket_name}/*"]
+                    }
+                ]
+            }
+            s3_client.put_bucket_policy(Bucket=bucket_name, Policy=json.dumps(policy))
         except Exception:
             pass
 
