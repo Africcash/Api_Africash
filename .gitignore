@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+.env
+Contracts/target/
+.DS_Store
+*.log
+staticfiles/
+test_snapshots/
+.agents/
+docs/
+AfricCash MVP – Project Brief.md
+media
