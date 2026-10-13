@@ -4,25 +4,27 @@ services:
     container_name: africash_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: africash_db
-      POSTGRES_USER: africash_user
-      POSTGRES_PASSWORD: africash_secure_password_2026
+      POSTGRES_DB: ${DB_NAME:-africash_db}
+      POSTGRES_USER: ${DB_USER:-africash_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-africash_secure_password_2026}
     ports:
-      - "5432:5432"
+      - "${DB_PORT_BINDING:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U africash_user -d africash_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-africash_user} -d ${DB_NAME:-africash_db}"]
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - africash_network
 
   redis:
     image: redis:7-alpine
     container_name: africash_redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT_BINDING:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -30,6 +32,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - africash_network
 
   minio:
     image: minio/minio:latest
@@ -37,11 +41,11 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_PORT_BINDING:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT_BINDING:-9001}:9001"
     volumes:
       - minio_data:/data
     healthcheck:
@@ -49,6 +53,8 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - africash_network
 
   minio_init:
     image: minio/mc:latest
@@ -58,46 +64,56 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      /usr/bin/mc alias set local http://minio:9000 minioadmin minioadmin;
-      /usr/bin/mc mb local/africash-media --ignore-existing;
-      /usr/bin/mc anonymous set download local/africash-media;
+      /usr/bin/mc alias set local http://minio:9000 $${MINIO_ACCESS_KEY:-minioadmin} $${MINIO_SECRET_KEY:-minioadmin};
+      /usr/bin/mc mb local/$${MINIO_BUCKET_NAME:-africash-media} --ignore-existing;
+      /usr/bin/mc anonymous set download local/$${MINIO_BUCKET_NAME:-africash-media};
       exit 0;
       "
+    networks:
+      - africash_network
 
   backend:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: africash_backend
     restart: unless-stopped
-    command: sh -c "python manage.py migrate && (python manage.py createsuperuser --noinput || true) && python manage.py runserver 0.0.0.0:8000"
-    volumes:
-      - .:/app
-    ports:
-      - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - SECRET_KEY=africash-insecure-dev-key-change-in-production-2026
-      - DEBUG=True
-      - ALLOWED_HOSTS=*
-      - CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173
-      - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=africash_db
-      - DB_USER=africash_user
-      - DB_PASSWORD=africash_secure_password_2026
       - DB_HOST=db
       - DB_PORT=5432
-      - REDIS_URL=redis://redis:6379/1
-      - MINIO_ENDPOINT=http://minio:9000
-      - MINIO_PUBLIC_URL=http://localhost:9000
-      - MINIO_ACCESS_KEY=minioadmin
-      - MINIO_SECRET_KEY=minioadmin
-      - MINIO_BUCKET_NAME=africash-media
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-africash_db}
+      - DB_USER=${DB_USER:-africash_user}
+      - DB_PASSWORD=${DB_PASSWORD:-africash_secure_password_2026}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/1}
+      - MINIO_ENDPOINT=${MINIO_ENDPOINT:-http://minio:9000}
+      - MINIO_PUBLIC_URL=${MINIO_PUBLIC_URL:-http://localhost:9000}
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY:-minioadmin}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY:-minioadmin}
+      - MINIO_BUCKET_NAME=${MINIO_BUCKET_NAME:-africash-media}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
       - DJANGO_SUPERUSER_USERNAME=${DJANGO_SUPERUSER_USERNAME:-admin}
       - DJANGO_SUPERUSER_PASSWORD=${DJANGO_SUPERUSER_PASSWORD:-admin1234}
       - DJANGO_SUPERUSER_EMAIL=${DJANGO_SUPERUSER_EMAIL:-admin@africash.io}
-      - STELLAR_NETWORK_PASSPHRASE=Test SDF Network ; September 2015
-      - STELLAR_RPC_URL=https://soroban-testnet.stellar.org
-      - STELLAR_HORIZON_URL=https://horizon-testnet.stellar.org
-      - USDC_ASSET_CONTRACT_ID=CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWUQX3PUL5L5OBOFBUC
-      - ESCROW_CONTRACT_ID=CCX2P2KDVKVVMX55OPUVYESN5XD73GEJ7EWLNZWNMNLAVZIQVZH5RNRC
+      - STELLAR_NETWORK_PASSPHRASE=${STELLAR_NETWORK_PASSPHRASE:-Test SDF Network ; September 2015}
+      - STELLAR_RPC_URL=${STELLAR_RPC_URL:-https://soroban-testnet.stellar.org}
+      - STELLAR_HORIZON_URL=${STELLAR_HORIZON_URL:-https://horizon-testnet.stellar.org}
+      - USDC_ASSET_CONTRACT_ID=${USDC_ASSET_CONTRACT_ID:-CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWUQX3PUL5L5OBOFBUC}
+      - ESCROW_CONTRACT_ID=${ESCROW_CONTRACT_ID:-CCX2P2KDVKVVMX55OPUVYESN5XD73GEJ7EWLNZWNMNLAVZIQVZH5RNRC}
+      - PORT=8000
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-3}
+      - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
+    ports:
+      - "${PORT:-8000}:8000"
+    volumes:
+      - staticfiles_data:/app/staticfiles
+      - media_data:/app/media
     depends_on:
       db:
         condition: service_healthy
@@ -105,27 +121,37 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+    networks:
+      - africash_network
+    # Dokploy Traefik integration (uncomment and replace domain if exposing through Dokploy reverse proxy):
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.africash.rule=Host(`api.yourdomain.com`)"
+    #   - "traefik.http.routers.africash.entrypoints=websecure"
+    #   - "traefik.http.routers.africash.tls.certresolver=letsencrypt"
+    #   - "traefik.http.services.africash.loadbalancer.server.port=8000"
 
   createsuperuser:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: africash_createsuperuser
     restart: "no"
     command: python manage.py createsuperuser
-    volumes:
-      - .:/app
+    env_file:
+      - .env
     environment:
-      - SECRET_KEY=africash-insecure-dev-key-change-in-production-2026
-      - DEBUG=True
-      - ALLOWED_HOSTS=*
-      - DB_ENGINE=django.db.backends.postgresql
-      - DB_NAME=africash_db
-      - DB_USER=africash_user
-      - DB_PASSWORD=africash_secure_password_2026
       - DB_HOST=db
       - DB_PORT=5432
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-africash_db}
+      - DB_USER=${DB_USER:-africash_user}
+      - DB_PASSWORD=${DB_PASSWORD:-africash_secure_password_2026}
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - africash_network
     profiles:
       - tools
 
@@ -133,3 +159,9 @@ volumes:
   postgres_data:
   redis_data:
   minio_data:
+  staticfiles_data:
+  media_data:
+
+networks:
+  africash_network:
+    driver: bridge

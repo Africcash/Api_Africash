@@ -1,11 +1,16 @@
 venv/
 __pycache__/
 *.py[cod]
+*$py.class
 db.sqlite3
 .env
 Contracts/target/
 .git/
+.gitignore
 .DS_Store
 *.log
 staticfiles/
+media/
 test_snapshots/
+.agents/
+docs/
