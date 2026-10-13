@@ -39,6 +39,7 @@ services:
     image: alpine/minio:latest-release
     container_name: africash_minio
     restart: unless-stopped
+    user: root
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
