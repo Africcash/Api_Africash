@@ -1,14 +1,11 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: africash_postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-africash_db}
       POSTGRES_USER: ${DB_USER:-africash_user}
       POSTGRES_PASSWORD: ${DB_PASSWORD:-africash_secure_password_2026}
-    ports:
-      - "${DB_PORT_BINDING:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -17,14 +14,11 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - africash_network
+      - dokploy-network
 
   redis:
     image: redis:7-alpine
-    container_name: africash_redis
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT_BINDING:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -33,13 +27,12 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - africash_network
+      - dokploy-network
 
   backend:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: africash_backend
     restart: unless-stopped
     env_file:
       - .env
@@ -67,8 +60,8 @@ services:
       - PORT=8000
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-3}
       - GUNICORN_TIMEOUT=${GUNICORN_TIMEOUT:-120}
-    ports:
-      - "${PORT:-8000}:8000"
+    expose:
+      - "8000"
     volumes:
       - staticfiles_data:/app/staticfiles
       - media_data:/app/media
@@ -78,20 +71,12 @@ services:
       redis:
         condition: service_healthy
     networks:
-      - africash_network
-    # Dokploy Traefik integration (uncomment and replace domain if exposing through Dokploy reverse proxy):
-    # labels:
-    #   - "traefik.enable=true"
-    #   - "traefik.http.routers.africash.rule=Host(`api.yourdomain.com`)"
-    #   - "traefik.http.routers.africash.entrypoints=websecure"
-    #   - "traefik.http.routers.africash.tls.certresolver=letsencrypt"
-    #   - "traefik.http.services.africash.loadbalancer.server.port=8000"
+      - dokploy-network
 
   createsuperuser:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: africash_createsuperuser
     restart: "no"
     command: python manage.py createsuperuser
     env_file:
@@ -107,7 +92,7 @@ services:
       db:
         condition: service_healthy
     networks:
-      - africash_network
+      - dokploy-network
     profiles:
       - tools
 
@@ -118,5 +103,5 @@ volumes:
   media_data:
 
 networks:
-  africash_network:
-    driver: bridge
+  dokploy-network:
+    external: true
