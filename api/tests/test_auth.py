@@ -1,5 +1,5 @@
 import base64
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -19,7 +19,7 @@ class WalletAuthApiTest(TestCase):
         self.assertEqual(response.data['stellar_address'], self.stellar_address)
         self.assertIn('nonce', response.data)
         self.assertIn('message', response.data)
-        self.assertIn('expires_in', response.data)
+        self.assertEqual(response.data['expires_in'], 900)
         self.assertIn(self.stellar_address, response.data['message'])
 
     def test_challenge_invalid_stellar_address(self):
@@ -105,3 +105,24 @@ class WalletAuthApiTest(TestCase):
             'signature': sig_b64,
         }, format='json')
         self.assertEqual(verify_res2.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(CHALLENGE_TIMEOUT_SECONDS=1800)
+    def test_challenge_custom_timeout_setting(self):
+        url = reverse('auth-challenge')
+        response = self.client.post(url, {'stellar_address': self.stellar_address}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['expires_in'], 1800)
+
+    def test_expired_challenge_rejected(self):
+        # When challenge nonce is expired or not in cache, verify returns 401
+        verify_url = reverse('auth-verify')
+        fake_sig = base64.b64encode(b"0" * 64).decode('utf-8')
+        verify_res = self.client.post(verify_url, {
+            'stellar_address': self.stellar_address,
+            'nonce': 'expired_or_nonexistent_nonce',
+            'signature': fake_sig,
+        }, format='json')
+
+        self.assertEqual(verify_res.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn("Invalid signature or expired challenge nonce.", verify_res.data.get("error", ""))

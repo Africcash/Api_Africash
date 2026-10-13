@@ -201,6 +201,9 @@ WHITENOISE_MANIFEST_STRICT = False
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Authentication Configuration
+CHALLENGE_TIMEOUT_SECONDS = int(os.getenv('CHALLENGE_TIMEOUT_SECONDS', '900'))
+
 # Stellar Network & Soroban Configuration
 STELLAR_NETWORK_PASSPHRASE = os.getenv('STELLAR_NETWORK_PASSPHRASE', 'Test SDF Network ; September 2015')
 STELLAR_RPC_URL = os.getenv('STELLAR_RPC_URL', 'https://soroban-testnet.stellar.org')

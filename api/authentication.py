@@ -1,6 +1,8 @@
+import os
 import time
 import secrets
 from typing import Optional, Tuple
+from django.conf import settings
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from rest_framework import authentication, exceptions
@@ -9,7 +11,18 @@ from api.security import validate_stellar_address, verify_stellar_signature
 
 User = get_user_model()
 
-CHALLENGE_TIMEOUT_SECONDS = 300  # 5 minutes
+DEFAULT_CHALLENGE_TIMEOUT_SECONDS = 900  # 15 minutes
+
+def get_challenge_timeout_seconds() -> int:
+    try:
+        val = getattr(settings, 'CHALLENGE_TIMEOUT_SECONDS', None)
+        if val is not None:
+            return int(val)
+    except Exception:
+        pass
+    return int(os.getenv('CHALLENGE_TIMEOUT_SECONDS', DEFAULT_CHALLENGE_TIMEOUT_SECONDS))
+
+CHALLENGE_TIMEOUT_SECONDS = get_challenge_timeout_seconds()
 SESSION_TIMEOUT_SECONDS = 86400 * 7  # 7 days
 
 def generate_auth_challenge(stellar_address: str) -> dict:
@@ -26,15 +39,16 @@ def generate_auth_challenge(stellar_address: str) -> dict:
         f"Timestamp: {timestamp}"
     )
 
+    timeout = get_challenge_timeout_seconds()
     cache_key = f"auth_challenge_{stellar_address}_{nonce}"
-    cache.set(cache_key, message, timeout=CHALLENGE_TIMEOUT_SECONDS)
+    cache.set(cache_key, message, timeout=timeout)
 
     return {
         "stellar_address": stellar_address,
         "nonce": nonce,
         "timestamp": timestamp,
         "message": message,
-        "expires_in": CHALLENGE_TIMEOUT_SECONDS,
+        "expires_in": timeout,
     }
 
 def verify_auth_challenge(stellar_address: str, nonce: str, signature: str) -> Optional[str]:

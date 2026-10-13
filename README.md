@@ -239,7 +239,7 @@ Users authenticate non-custodially using their connected Stellar wallet (via [St
 
 1. **Step 1: Request Challenge**
    - Frontend calls `POST /api/auth/challenge/` with `{ "stellar_address": "G..." }`.
-   - Backend responds with `{ "message": "...", "nonce": "...", "expires_in": 300 }`.
+   - Backend responds with `{ "message": "...", "nonce": "...", "expires_in": 900 }` (configurable via `CHALLENGE_TIMEOUT_SECONDS`, default 15 minutes).
 2. **Step 2: Wallet Signature**
    - Frontend prompts user's wallet to sign the message string.
 3. **Step 3: Verify Signature**
