@@ -46,6 +46,23 @@ class SecurityUtilsTest(TestCase):
         other_keypair = Keypair.random()
         self.assertFalse(verify_stellar_signature(other_keypair.public_key, message, sig_b64))
 
+    def test_verify_stellar_signature_sep53(self):
+        # Wallets like Freighter, Hana, LOBSTR, xBull sign using SEP-53 (sign_message)
+        message = "AfriCash Authentication\nAddress: " + self.public_key + "\nNonce: 123456\nTimestamp: 123456"
+        sep53_sig = self.keypair.sign_message(message)
+        sig_b64 = base64.b64encode(sep53_sig).decode('utf-8')
+        sig_hex = sep53_sig.hex()
+
+        self.assertTrue(verify_stellar_signature(self.public_key, message, sig_b64))
+        self.assertTrue(verify_stellar_signature(self.public_key, message, sig_hex))
+
+        # Tampered message should fail
+        self.assertFalse(verify_stellar_signature(self.public_key, "Tampered Message", sig_b64))
+
+        # Normalized CRLF vs LF messages should verify
+        crlf_message = message.replace('\n', '\r\n')
+        self.assertTrue(verify_stellar_signature(self.public_key, crlf_message, sig_b64))
+
     def test_sanitize_text(self):
         html_input = "<script>alert('xss');</script> Lagos Central POS"
         self.assertEqual(sanitize_text(html_input), "alert('xss'); Lagos Central POS")

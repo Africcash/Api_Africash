@@ -80,13 +80,16 @@ def verify_auth_challenge(stellar_address: str, nonce: str, signature: str) -> O
 
 class StellarWalletAuthentication(authentication.BaseAuthentication):
     # Authenticate requests using Bearer token or direct wallet headers
+    def authenticate_header(self, request) -> str:
+        return 'Bearer realm="api"'
+
     def authenticate(self, request) -> Optional[Tuple[User, str]]:
         auth_header = request.headers.get("Authorization")
         if not auth_header:
             return None
 
         parts = auth_header.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
+        if len(parts) != 2 or parts[0].lower() not in ("bearer", "token"):
             return None
 
         token = parts[1]
@@ -117,5 +120,5 @@ class StellarWalletAuthScheme(OpenApiAuthenticationExtension):
             'type': 'http',
             'scheme': 'bearer',
             'bearerFormat': 'Token',
-            'description': 'Stellar wallet bearer token obtained from /api/auth/verify/',
+            'description': 'Stellar wallet session token obtained from /api/auth/verify/. Accepts "Bearer <token>" or "Token <token>".',
         }

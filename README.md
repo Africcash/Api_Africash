@@ -246,9 +246,10 @@ Users authenticate non-custodially using their connected Stellar wallet (via [St
    - Frontend calls `POST /api/auth/verify/` with `{ "stellar_address": "G...", "nonce": "...", "signature": "<base64_sig>" }`.
    - Backend cryptographically verifies the Ed25519 signature using `stellar-sdk` and issues a session token.
 4. **Step 4: Authenticated Requests**
-   - Include the header: `Authorization: Bearer <token>`.
+   - Include the header: `Authorization: Bearer <token>` (or `Authorization: Token <token>`).
+   - For local development connecting the Next.js frontend (`africcash` on `http://localhost:3000`) to the backend on `http://localhost:8000`, configure `NEXT_PUBLIC_API_URL=http://localhost:8000/api` in `africcash/.env.local`.
 
-For detailed React code samples, see [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md).
+For detailed React code samples and configuration, see [docs/FRONTEND_INTEGRATION.md](docs/FRONTEND_INTEGRATION.md).
 
 ---
 

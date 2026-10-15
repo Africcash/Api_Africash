@@ -45,8 +45,32 @@ def verify_stellar_signature(public_key: str, message: str, signature_data: str)
 
     try:
         verifier = Keypair.from_public_key(public_key)
-        verifier.verify(message.encode('utf-8'), sig_bytes)
-        return True
+        candidates = [message]
+        if '\r\n' in message:
+            candidates.append(message.replace('\r\n', '\n'))
+        elif '\n' in message:
+            candidates.append(message.replace('\n', '\r\n'))
+
+        for candidate in candidates:
+            # 1. Standard SEP-53 message verification (Freighter, Hana, LOBSTR, xBull)
+            try:
+                verifier.verify_message(candidate, sig_bytes)
+                return True
+            except BadSignatureError:
+                pass
+            except Exception:
+                pass
+
+            # 2. Raw signature fallback (scripts, direct Keypair.sign)
+            try:
+                verifier.verify(candidate.encode('utf-8'), sig_bytes)
+                return True
+            except BadSignatureError:
+                pass
+            except Exception:
+                pass
+
+        return False
     except (BadSignatureError, Exception):
         return False
 
