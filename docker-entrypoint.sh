@@ -35,6 +35,17 @@ if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; t
   python manage.py createsuperuser --noinput 2>/dev/null || true
 fi
 
+# Seed initial cash agents (enabled by default unless SEED_AGENTS=false/0)
+case "${SEED_AGENTS:-true}" in
+  [Ff][Aa][Ll][Ss][Ee]|0|[Nn][Oo])
+    echo "Skipping initial agent seeding (SEED_AGENTS=${SEED_AGENTS})."
+    ;;
+  *)
+    echo "Seeding initial cash agents..."
+    python manage.py seed_agents
+    ;;
+esac
+
 # Execute CMD passed to container, or fallback to production Gunicorn
 if [ $# -eq 0 ]; then
   PORT="${PORT:-8000}"

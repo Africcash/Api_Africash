@@ -133,3 +133,28 @@ class AgentApiTest(TestCase):
         self.assertIn('total_volume_usdc', res.data)
         self.assertIn('estimated_earnings_usdc', res.data)
         self.assertIn('reputation_score', res.data)
+
+    def test_seed_agents_command_idempotent_and_force(self):
+        from django.core.management import call_command
+        from api.management.commands.seed_agents import DEFAULT_AGENTS
+
+        initial_count = AgentProfile.objects.count()
+        call_command('seed_agents')
+        expected_total = initial_count + len(DEFAULT_AGENTS)
+        self.assertEqual(AgentProfile.objects.count(), expected_total)
+
+        # Running a second time without --force should not create duplicates or overwrite edits
+        seeded_agent = AgentProfile.objects.get(stellar_address=DEFAULT_AGENTS[0]['stellar_address'])
+        seeded_agent.name = "Custom Edited Name"
+        seeded_agent.save()
+
+        call_command('seed_agents')
+        self.assertEqual(AgentProfile.objects.count(), expected_total)
+        seeded_agent.refresh_from_db()
+        self.assertEqual(seeded_agent.name, "Custom Edited Name")
+
+        # Running with --force restores default values
+        call_command('seed_agents', force=True)
+        seeded_agent.refresh_from_db()
+        self.assertEqual(seeded_agent.name, DEFAULT_AGENTS[0]['name'])
+
